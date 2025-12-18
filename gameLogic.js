@@ -38,6 +38,23 @@ class Game {
         this.hostId = null; // Track who is host
     }
 
+    resetGame() {
+        this.deck = [];
+        this.rows = [[], [], [], []];
+        this.round = 0;
+        this.gameState = 'waiting';
+        this.playedCards = [];
+        this.resolutionIndex = 0;
+        this.pendingRowChoice = null;
+
+        // Reset scores but keep players
+        for (let sid in this.players) {
+            this.players[sid].score = 0;
+            this.players[sid].hand = [];
+            this.players[sid].scorePile = [];
+        }
+    }
+
     generateDeck() {
         this.deck = [];
         for (let i = 1; i <= 104; i++) {
@@ -260,6 +277,19 @@ class Game {
             this.gameState = 'round_end';
             // Here we would check for game end (66 points)
         }
+    }
+
+    checkGameEnd() {
+        // Return null if game continues, or winner object if game ends
+        const players = Object.values(this.players);
+        const someoneLost = players.some(p => p.score >= this.maxScore);
+
+        if (someoneLost) {
+            // Winner is player with lowest score
+            players.sort((a, b) => a.score - b.score);
+            return players[0]; // Winner
+        }
+        return null;
     }
 }
 

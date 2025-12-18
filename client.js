@@ -35,9 +35,16 @@ const toastDiv = document.createElement('div');
 toastDiv.id = 'toast';
 document.body.appendChild(toastDiv);
 
+// Staging Area
+const playedCenterDiv = document.createElement('div');
+playedCenterDiv.id = 'played-center';
+document.body.appendChild(playedCenterDiv);
+
 // State
 let myHand = [];
 let isSelectingRow = false;
+let previousRowsState = [[], [], [], []]; // For diffing
+let isAnimating = false;
 
 // Join Game
 joinBtn.addEventListener('click', () => {
@@ -91,6 +98,36 @@ socket.on('error', (msg) => {
     alert(msg);
 });
 
+socket.on('roundEnd', (data) => {
+    showToast(`Fin de la manche ! La prochaine commence dans ${data.seconds}s... ⏳`);
+});
+
+socket.on('newRound', () => {
+    showToast("Nouvelle manche ! 🃏");
+    document.body.style.background = "#2ecc71"; // Quick green flash
+    setTimeout(() => { document.body.style.background = ""; }, 300);
+});
+
+socket.on('gameOver', (winner) => {
+    let msg = `GAME OVER ! 👑 Vainqueur : ${winner.name} (${winner.score} pts)`;
+    overlayMsg.innerHTML = `<h1>${msg}</h1><p>Les autres ont dépassé 66 têtes de bœufs !</p>`;
+
+    // Add reset button for everyone, but logic checks host
+    const resetBtn = document.createElement('button');
+    resetBtn.innerText = "Retour au menu";
+    resetBtn.style.marginTop = "20px";
+    resetBtn.style.padding = "10px 20px";
+    resetBtn.style.fontSize = "1.2rem";
+    resetBtn.style.cursor = "pointer";
+    resetBtn.onclick = () => {
+        socket.emit('resetGame');
+        location.reload(); // Simple reload for now to clear state
+    };
+
+    overlayMsg.appendChild(resetBtn);
+    overlayMsg.classList.remove('hidden');
+});
+
 // Rendering Logic
 
 function renderGame(state) {
@@ -124,13 +161,42 @@ function renderGame(state) {
         playersList.appendChild(div);
     });
 
-    // 3. Render Rows
+    // 3. Render Rows with Smart Diffing (No Flicker) & Animation Trigger
     state.rows.forEach((rowCards, index) => {
         const rowDiv = rowDivs[index];
-        rowDiv.innerHTML = '';
-        rowCards.forEach(cardData => {
-            rowDiv.appendChild(createCardElement(cardData));
+        // Identify new cards for animation
+        const prevRow = previousRowsState[index] || [];
+        const newCards = rowCards.slice(prevRow.length);
+
+        // Sync DOM
+        syncRow(rowDiv, rowCards);
+
+        // If new cards arrived, check if they match any played card in center
+        // and trigger animation
+        newCards.forEach(cardData => {
+            // Find the card element in the row
+            const cardEl = Array.from(rowDiv.children).find(el =>
+                el.innerText.includes(cardData.number) // Rough check, better with data-id
+            );
+
+            if (cardEl) {
+                // Check if this card was in center?
+                // Actually, let's just animate from center if it's a resolving phase
+                if (state.gameState === 'resolving') {
+                    // Find matching card in played center (if it exists)
+                    const centerCard = Array.from(playedCenterDiv.children).find(el =>
+                        el.innerText.includes(cardData.number)
+                    );
+
+                    if (centerCard) {
+                        animateCardMove(centerCard, cardEl);
+                    }
+                }
+            }
         });
+
+        // Update previous state
+        previousRowsState[index] = [...rowCards];
 
         // Click handler for row selection
         rowDiv.onclick = () => {
@@ -142,6 +208,9 @@ function renderGame(state) {
             }
         };
     });
+
+    // 4. Render Played Cards (Center Staging)
+    renderPlayedCenter(state.playedCards);
 }
 
 function renderHand() {
@@ -185,6 +254,101 @@ function createCardElement(card) {
     el.appendChild(bottomDiv);
 
     return el;
+}
+
+// Smart Diffing for Rows
+function syncRow(rowDiv, cards) {
+    const currentChildren = Array.from(rowDiv.children);
+
+    // Simple strategy: 
+    // 1. Remove extras
+    // 2. Update/Append existing
+
+    // Actually simpler for this game: 
+    // Cards only append, or row clears.
+
+    if (cards.length === 0 && currentChildren.length > 0) {
+        rowDiv.innerHTML = ''; // Row taken/reset
+        return;
+    }
+
+    // If cards appended
+    if (cards.length > currentChildren.length) {
+        for (let i = currentChildren.length; i < cards.length; i++) {
+            const newCard = createCardElement(cards[i]);
+            // Add ID for tracking
+            newCard.dataset.number = cards[i].number;
+            // newCard.style.opacity = '0'; // Start hidden for animation?
+            rowDiv.appendChild(newCard);
+        }
+    }
+    // Handle edge case if row changes completely (should verify numbers)
+}
+
+function renderPlayedCenter(playedCards) {
+    // Sync center div
+    // We only care about showing cards that are NOT yet in rows
+    // But server clears playedCards as they move to rows?
+    // Actually server logic: processNextStep moves card from playedCards to row.
+    // So if it's in playedCards, it's in center.
+
+    playedCenterDiv.innerHTML = '';
+    playedCards.forEach(pc => {
+        const cardEl = createCardElement(pc.card);
+        cardEl.dataset.owner = pc.player; // Maybe show name?
+        // Add a small label for who played it?
+        const label = document.createElement('div');
+        label.innerText = pc.player;
+        label.style.position = 'absolute';
+        label.style.bottom = '-20px';
+        label.style.fontSize = '12px';
+        label.style.color = 'white';
+        label.style.width = '100%';
+        label.style.textAlign = 'center';
+        cardEl.appendChild(label);
+
+        playedCenterDiv.appendChild(cardEl);
+    });
+}
+
+function animateCardMove(startEl, endEl) {
+    // FLIP Animation
+    // First: Get start position
+    const startRect = startEl.getBoundingClientRect();
+
+    // Last: Get end position
+    const endRect = endEl.getBoundingClientRect();
+
+    // Invert: Calculate difference
+    const deltaX = startRect.left - endRect.left;
+    const deltaY = startRect.top - endRect.top;
+    const scaleX = startRect.width / endRect.width; // Should be 1
+
+    // Clone the element to animate (so we don't mess up the grid flow)
+    const flyingCard = startEl.cloneNode(true);
+    flyingCard.classList.add('card-moving');
+
+    // Set initial position (End position + Delta) -> This puts it visually at Start
+    flyingCard.style.top = `${endRect.top}px`;
+    flyingCard.style.left = `${endRect.left}px`;
+    flyingCard.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+    document.body.appendChild(flyingCard);
+
+    // Hide original until animation done
+    endEl.classList.add('hidden-card');
+
+    // Force Reflow
+    flyingCard.offsetHeight;
+
+    // Play: Remove transform to letting it slide to 0,0 (End)
+    flyingCard.style.transform = `translate(0, 0)`;
+
+    // Cleanup
+    setTimeout(() => {
+        flyingCard.remove();
+        endEl.classList.remove('hidden-card');
+    }, 600); // Match CSS transition time
 }
 
 function getCardType(bullheads, number) {

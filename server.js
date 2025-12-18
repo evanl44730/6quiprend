@@ -96,6 +96,13 @@ io.on('connection', (socket) => {
             io.to(sid).emit('hand', player.hand);
         }
     });
+
+    socket.on('resetGame', () => {
+        if (game.hostId === socket.id) {
+            game.resetGame();
+            io.emit('gameState', game.getPublicState());
+        }
+    });
 });
 
 // Resolution Loop
@@ -152,8 +159,34 @@ function handleTurnResult(result) {
             io.emit('newTurn'); // Trigger hand refresh if needed
             console.log('Turn complete. Starting new selection phase.');
         } else if (game.gameState === 'round_end') {
-            console.log('Round complete.');
-            // Logic for new round...
+            console.log(`Round ${game.round} complete.`);
+            console.log('Current Scores:', game.players);
+
+            // Check for Game Over (66 points)
+            const winner = game.checkGameEnd();
+
+            if (winner) {
+                console.log('Game Over! Winner:', winner.name);
+                io.emit('gameOver', winner);
+                // Game stays in round_end state until host resets (optional feature)
+                // For now, let's allow host to "Start Game" again to full reset? 
+                // We'll need a reset handler or just re-enable start button.
+            } else {
+                // Start new round after delay
+                console.log('Starting next round in 5 seconds...');
+                io.emit('roundEnd', { seconds: 5 }); // Optional countdown for client
+
+                setTimeout(() => {
+                    game.startRound();
+                    io.emit('newRound'); // Client should clear board/hands
+                    io.emit('gameState', game.getPublicState());
+
+                    // Send new hands
+                    for (let sid in game.players) {
+                        io.to(sid).emit('hand', game.players[sid].hand);
+                    }
+                }, 5000);
+            }
         }
     }
 }
