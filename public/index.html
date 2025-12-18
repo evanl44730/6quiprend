@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6 Qui Prend - Ultimate</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Poppins:wght@700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Login Screen -->
+    <div id="login-screen">
+        <h1>6 qui prend</h1>
+        <p>Enter your name to join:</p>
+        <input type="text" id="username-input" placeholder="Pseudo" style="padding: 10px; font-size: 16px;">
+        <button id="join-btn"
+            style="padding: 10px 20px; font-size: 16px; margin-top: 10px; cursor: pointer;">Rejoindre</button>
+        <br>
+
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="hidden">
+        <div id="status-area">
+            <h2 id="game-phase">En attente...</h2>
+            <button id="game-start-btn" class="hidden"
+                style="background:#e74c3c; color:white; border:none; padding:10px; cursor: pointer; border-radius: 5px;">Lancer
+                la partie</button>
+            <div id="overlay-message" class="hidden"></div>
+        </div>
+
+        <div id="players-list">
+            <!-- Player tags will go here -->
+        </div>
+
+        <!-- The 4 Rows -->
+        <div id="board">
+            <div class="row" id="row-0"></div>
+            <div class="row" id="row-1"></div>
+            <div class="row" id="row-2"></div>
+            <div class="row" id="row-3"></div>
+        </div>
+
+        <!-- Player Hand -->
+        <div id="hand-container">
+            <!-- Cards go here -->
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+
+</html>
