@@ -15,7 +15,8 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 
 // Serve static files from 'public' directory
-app.use(express.static('public'));
+// Serve static files from root directory
+app.use(express.static(__dirname));
 
 const game = new Game();
 
