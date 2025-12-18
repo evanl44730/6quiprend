@@ -260,29 +260,36 @@ function createCardElement(card) {
 function syncRow(rowDiv, cards) {
     const currentChildren = Array.from(rowDiv.children);
 
-    // Simple strategy: 
-    // 1. Remove extras
-    // 2. Update/Append existing
+    // If row cleared or reduced size (taken), or entirely different start
+    // We must reset. Diffing is hard when "taking a row".
+    // Simple heuristic: if length decreased, OR first card doesn't match, full reset.
+    // (In 6 qui prend, rows only grow, UNLESS taken).
 
-    // Actually simpler for this game: 
-    // Cards only append, or row clears.
+    let shouldReset = false;
+    if (cards.length < currentChildren.length) shouldReset = true;
+    else if (cards.length > 0 && currentChildren.length > 0) {
+        const firstDom = parseInt(currentChildren[0].dataset.number);
+        if (firstDom !== cards[0].number) shouldReset = true;
+    }
 
-    if (cards.length === 0 && currentChildren.length > 0) {
-        rowDiv.innerHTML = ''; // Row taken/reset
+    if (shouldReset) {
+        rowDiv.innerHTML = '';
+        cards.forEach(card => {
+            const newCard = createCardElement(card);
+            newCard.dataset.number = card.number;
+            rowDiv.appendChild(newCard);
+        });
         return;
     }
 
-    // If cards appended
+    // If we are here, we are just appending new cards
     if (cards.length > currentChildren.length) {
         for (let i = currentChildren.length; i < cards.length; i++) {
             const newCard = createCardElement(cards[i]);
-            // Add ID for tracking
             newCard.dataset.number = cards[i].number;
-            // newCard.style.opacity = '0'; // Start hidden for animation?
             rowDiv.appendChild(newCard);
         }
     }
-    // Handle edge case if row changes completely (should verify numbers)
 }
 
 function renderPlayedCenter(playedCards) {

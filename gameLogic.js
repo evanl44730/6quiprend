@@ -130,7 +130,12 @@ class Game {
                 hasPlayed: this.playedCards.some(pc => pc.socketId === p.id)
             })),
             gameState: this.gameState,
-            playedCards: this.gameState === 'revealing' || this.gameState === 'resolving' ? this.playedCards : [],
+            playedCards: (this.gameState === 'revealing' || this.gameState === 'resolving')
+                ? this.playedCards.map(pc => ({
+                    card: pc.card,
+                    player: this.players[pc.socketId] ? this.players[pc.socketId].name : 'Unknown'
+                }))
+                : [],
             currentResolvingCard: this.gameState === 'resolving' && this.playedCards[this.resolutionIndex] ? this.playedCards[this.resolutionIndex] : null,
             pendingRowChoice: this.pendingRowChoice,
             hostId: this.hostId
