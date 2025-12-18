@@ -44,7 +44,9 @@ document.body.appendChild(playedCenterDiv);
 let myHand = [];
 let isSelectingRow = false;
 let previousRowsState = [[], [], [], []]; // For diffing
+let currentRows = [[], [], [], []]; // For prediction logic
 let isAnimating = false;
+let hasPlayed = false; // Prevent multiple clicks
 
 // Join Game
 joinBtn.addEventListener('click', () => {
@@ -75,6 +77,11 @@ socket.on('playUpdate', () => {
     // Optional: could play a sound
 });
 
+socket.on('newTurn', () => {
+    hasPlayed = false; // Reset for next turn
+    renderHand(); // Re-render to enable clicks
+});
+
 socket.on('rowTaken', (data) => {
     // Visual Feedback
     document.body.classList.add('flash-red');
@@ -103,6 +110,7 @@ socket.on('roundEnd', (data) => {
 });
 
 socket.on('newRound', () => {
+    hasPlayed = false; // Reset state
     showToast("Nouvelle manche ! 🃏");
     document.body.style.background = "#2ecc71"; // Quick green flash
     setTimeout(() => { document.body.style.background = ""; }, 300);
@@ -157,9 +165,15 @@ function renderGame(state) {
     state.players.forEach(p => {
         const div = document.createElement('div');
         div.className = `player-tag ${p.hasPlayed && state.gameState === 'selecting_cards' ? 'has-played' : ''}`;
-        div.innerText = `${p.name}: ${p.score} 🐮`;
+
+        let avatarHtml = `<img src="${getAvatarUrl(p.name)}" class="avatar" alt="avatar">`;
+        div.innerHTML = `${avatarHtml} <span>${p.name}: ${p.score} 🐮</span>`;
+
         playersList.appendChild(div);
     });
+
+    // Save current rows for prediction
+    currentRows = state.rows;
 
     // 3. Render Rows with Smart Diffing (No Flicker) & Animation Trigger
     state.rows.forEach((rowCards, index) => {
@@ -214,18 +228,82 @@ function renderGame(state) {
 }
 
 function renderHand() {
-    handContainer.innerHTML = '';
+    // Smart Diffing for Hand
+    const currentCardEls = Array.from(handContainer.children);
+    const newCardNumbers = myHand.map(c => c.number);
+
+    // 1. Remove cards not in hand
+    currentCardEls.forEach(el => {
+        const num = parseInt(el.dataset.number);
+        if (!newCardNumbers.includes(num)) {
+            el.remove();
+        }
+    });
+
+    // 2. Add new cards / Update existing
     myHand.forEach(card => {
-        const cardEl = createCardElement(card);
-        cardEl.classList.add('clickable');
-        cardEl.onclick = () => {
-            if (!isSelectingRow) { // Can't play if choosing row
-                socket.emit('playCard', card.number);
-                // Optimistic remove? No, wait for server update
-                cardEl.style.opacity = '0.5';
-            }
-        };
-        handContainer.appendChild(cardEl);
+        let cardEl = currentCardEls.find(el => parseInt(el.dataset.number) === card.number);
+
+        if (!cardEl) {
+            // New card
+            cardEl = createCardElement(card);
+            cardEl.dataset.number = card.number;
+
+            // Add click listener (only once on creation)
+            cardEl.onclick = () => {
+                if (!isSelectingRow && !hasPlayed) {
+                    socket.emit('playCard', card.number);
+                    hasPlayed = true;
+
+                    // Visual feedback
+                    cardEl.style.opacity = '0.5';
+                    cardEl.classList.add('played');
+                    renderHand(); // Trigger update to lock others
+
+                    // Clear highlights
+                    clearHighlights();
+                }
+            };
+
+            // Hover effects (Visual Aid)
+            cardEl.onmouseenter = () => {
+                if (!isSelectingRow && !hasPlayed) {
+                    highlightPredictedRow(card.number);
+                }
+            };
+
+            cardEl.onmouseleave = () => {
+                clearHighlights();
+            };
+
+            // Insert in correct order?
+            // Hands are sorted by server, so appending usually works if we process in order.
+            // Since "remove" happened first, we just append new ones. 
+            // A perfect sort sync is harder but appending sorted hand usually works fine for this game.
+            handContainer.appendChild(cardEl);
+        }
+
+
+        // Update State & Reset Visuals (Important for diffing!)
+        cardEl.className = `card type-${getCardType(card.bullheads, card.number)} clickable`;
+
+        // If this specific card was just clicked by us, keep it gray.
+        // But since we use 'hasPlayed' for logic, we can just check if it's "played" class
+        // Actually, we should CLEAN styles by default, unless it's the one we just clicked?
+        // Simpler: If hasPlayed is true, maybe gray everything? Or just blocks clicks.
+        // User asked for "others are grayed". Let's focus on blocking clicks first.
+
+        // Reset style always to be safe against persistence
+        if (!cardEl.classList.contains('played')) {
+            cardEl.style.opacity = '1';
+            cardEl.style.cursor = 'pointer';
+        }
+
+        // Lock clicks if already played
+        if (hasPlayed && !cardEl.classList.contains('played')) {
+            cardEl.style.cursor = 'not-allowed';
+            cardEl.style.opacity = '0.7'; // Visual feedback that you can't click
+        }
     });
 }
 
@@ -305,17 +383,58 @@ function renderPlayedCenter(playedCards) {
         cardEl.dataset.owner = pc.player; // Maybe show name?
         // Add a small label for who played it?
         const label = document.createElement('div');
-        label.innerText = pc.player;
-        label.style.position = 'absolute';
-        label.style.bottom = '-20px';
-        label.style.fontSize = '12px';
-        label.style.color = 'white';
-        label.style.width = '100%';
-        label.style.textAlign = 'center';
+        label.className = 'played-label';
+
+        const avatarUrl = getAvatarUrl(pc.player);
+        label.innerHTML = `<img src="${avatarUrl}" class="avatar-small"> ${pc.player}`;
+
         cardEl.appendChild(label);
 
         playedCenterDiv.appendChild(cardEl);
     });
+}
+
+function highlightPredictedRow(cardNumber) {
+    clearHighlights();
+
+    let bestRowIndex = -1;
+    let minDiff = 105;
+
+    currentRows.forEach((row, index) => {
+        if (row.length === 0) return; // Should not happen in game flow
+        const lastCard = row[row.length - 1];
+
+        if (cardNumber > lastCard.number) {
+            const diff = cardNumber - lastCard.number;
+            if (diff < minDiff) {
+                minDiff = diff;
+                bestRowIndex = index;
+            }
+        }
+    });
+
+    if (bestRowIndex !== -1) {
+        // Valid placement
+        rowDivs[bestRowIndex].classList.add('highlight-target');
+    } else {
+        // Too small! Danger!
+        rowDivs.forEach(div => div.classList.add('highlight-danger'));
+    }
+}
+
+function clearHighlights() {
+    rowDivs.forEach(div => {
+        div.classList.remove('highlight-target');
+        div.classList.remove('highlight-danger');
+    });
+}
+
+function getAvatarUrl(name) {
+    // Determine seed from name or just use name directly
+    // Using 'bottts' as requested for robot style
+    // You can also use 'adventurer' or 'fun-emoji'
+    const seed = encodeURIComponent(name);
+    return `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}&backgroundColor=transparent`;
 }
 
 function animateCardMove(startEl, endEl) {

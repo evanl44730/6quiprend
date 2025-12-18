@@ -28,7 +28,18 @@
 /* --- Global Reset & Typography --- */
 body {
     font-family: 'Inter', sans-serif;
-    background: var(--bg-radial);
+    /* Premium Game Background */
+    background-color: #050505;
+    background-image:
+        /* Vignette (Corners) */
+        radial-gradient(circle at center, transparent 20%, #000000 100%),
+        /* Geometric Texture (Subtle Grid) */
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        /* Base Atmosphere */
+        radial-gradient(circle at center, #2c3e50 0%, #000000 100%);
+    background-size: 100% 100%, 40px 40px, 40px 40px, 100% 100%;
+
     color: var(--text-main);
     margin: 0;
     padding: 0;
@@ -194,6 +205,39 @@ button {
     box-shadow: 0 0 15px rgba(46, 204, 113, 0.2);
 }
 
+.avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.avatar-small {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #fff;
+    margin-right: 5px;
+}
+
+.played-label {
+    position: absolute;
+    bottom: -35px;
+    width: 140%;
+    left: -20%;
+    text-align: center;
+    color: white;
+    font-size: 11px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 4px;
+    border-radius: 12px;
+    backdrop-filter: blur(4px);
+}
+
 /* --- Board (The Mat) --- */
 #board {
     background: rgba(255, 255, 255, 0.03);
@@ -244,7 +288,37 @@ button {
     background: rgba(0, 0, 0, 0.2);
     border-radius: 16px;
     padding: 15px;
-    transition: background 0.3s, transform 0.2s;
+    padding: 15px;
+    transition: background 0.3s, transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    border: 2px solid transparent;
+    /* Prepare for border highlight */
+}
+
+.row.highlight-target {
+    border-color: var(--accent-green);
+    box-shadow: 0 0 20px rgba(46, 204, 113, 0.3);
+    background: rgba(46, 204, 113, 0.1);
+}
+
+.row.highlight-danger {
+    border-color: var(--accent-red);
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.3);
+    background: rgba(231, 76, 60, 0.1);
+    animation: pulseDanger 1s infinite;
+}
+
+@keyframes pulseDanger {
+    0% {
+        box-shadow: 0 0 10px rgba(231, 76, 60, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 25px rgba(231, 76, 60, 0.5);
+    }
+
+    100% {
+        box-shadow: 0 0 10px rgba(231, 76, 60, 0.2);
+    }
 }
 
 .row.selectable {
@@ -281,12 +355,24 @@ button {
     padding: 8px;
     box-sizing: border-box;
     position: relative;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+
+    /* Premium 3D Feel */
+    box-shadow:
+        0 4px 6px rgba(0, 0, 0, 0.4),
+        /* Diffuse shadow */
+        0 1px 0 rgba(255, 255, 255, 0.2) inset;
+    /* Top edge light catch */
+    border: 1px solid rgba(0, 0, 0, 0.2);
+
+    /* Texture/Finish - slight noise feel via gradient */
+    background-image:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.05) 100%);
+
     user-select: none;
     color: #333;
     font-family: 'Poppins', sans-serif;
     transform-style: preserve-3d;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s, border-color 0.3s;
     animation: dealCard 0.5s ease-out backwards;
 }
 
@@ -317,35 +403,52 @@ button {
 }
 
 /* Card Types */
+/* Card Types - Danger Glows */
 .card.type-1 {
+    /* Safe - Minimal glow */
+    background-color: #f1c40f;
     background: linear-gradient(135deg, #f1c40f, #f39c12);
     color: #fff;
+    border: 1px solid #d35400;
+    /* Subtle border */
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .card.type-2 {
+    /* Caution - 2-3 Heads - Orange Glow */
     background: linear-gradient(135deg, #1abc9c, #16a085);
     color: #fff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-.card.type-3 {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
-    color: #fff;
+    border: 1px solid #e67e22;
+    box-shadow: 0 0 10px rgba(230, 126, 34, 0.4), 0 4px 6px rgba(0, 0, 0, 0.4);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .card.type-5 {
+    /* Danger - 5 Heads - Red Glow */
     background: linear-gradient(135deg, #e74c3c, #c0392b);
     color: #fff;
+    border: 1px solid #c0392b;
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.6), 0 4px 6px rgba(0, 0, 0, 0.4);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .card.type-7 {
+    /* Extreme - 55 - Pulsing Red */
     background: linear-gradient(135deg, #8e44ad, #2c3e50);
     color: #fff;
     border: 2px solid #f1c40f;
-    box-shadow: 0 0 15px rgba(241, 196, 15, 0.4);
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.8), 0 0 5px rgba(241, 196, 15, 0.5);
+    animation: pulseCardDanger 1.5s infinite alternate, dealCard 0.5s ease-out backwards;
+}
+
+@keyframes pulseCardDanger {
+    from {
+        box-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
+    }
+
+    to {
+        box-shadow: 0 0 30px rgba(231, 76, 60, 1), 0 0 10px rgba(241, 196, 15, 0.8);
+    }
 }
 
 /* Hover for Playable Cards */
