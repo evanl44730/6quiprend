@@ -160,6 +160,24 @@ function renderGame(state) {
         rowDivs.forEach(div => div.classList.remove('selectable'));
     }
 
+    // Spectator Handling
+    const currentPlayer = state.players.find(p => p.id === socket.id);
+    let banner = document.getElementById('spectator-banner');
+
+    if (currentPlayer && currentPlayer.isSpectator) {
+        handContainer.classList.add('hidden');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'spectator-banner';
+            banner.innerText = 'Mode Spectateur - Partie en cours';
+            document.body.appendChild(banner);
+        }
+    } else {
+        handContainer.classList.remove('hidden');
+        if (banner) banner.remove();
+        renderHand();
+    }
+
     // 2. Render Players
     playersList.innerHTML = '';
     state.players.forEach(p => {
@@ -167,7 +185,8 @@ function renderGame(state) {
         div.className = `player-tag ${p.hasPlayed && state.gameState === 'selecting_cards' ? 'has-played' : ''}`;
 
         let avatarHtml = `<img src="${getAvatarUrl(p.name)}" class="avatar" alt="avatar">`;
-        div.innerHTML = `${avatarHtml} <span>${p.name}: ${p.score} 🐮</span>`;
+        let spectatorHtml = p.isSpectator ? '<span class="spectator-icon" title="Spectateur">👁️</span>' : '';
+        div.innerHTML = `${avatarHtml} <span>${p.name}: ${p.score} 🐮</span>${spectatorHtml}`;
 
         playersList.appendChild(div);
     });

@@ -52,6 +52,7 @@ class Game {
             this.players[sid].score = 0;
             this.players[sid].hand = [];
             this.players[sid].scorePile = [];
+            this.players[sid].isSpectator = false; // Everyone rejoins as player on reset
         }
     }
 
@@ -76,8 +77,13 @@ class Game {
             name: name,
             hand: [],
             score: 0,
-            scorePile: [] // Cards collected (optional, or just tally score directly)
+            scorePile: [],
+            isSpectator: this.gameState !== 'waiting' // Late joiners are spectators
         };
+
+        if (this.players[socketId].isSpectator) {
+            console.log(`Player ${name} joined as Spectator.`);
+        }
 
         // Set host if first player
         if (!this.hostId) {
@@ -127,7 +133,8 @@ class Game {
                 name: p.name,
                 score: p.score,
                 handSize: p.hand.length,
-                hasPlayed: this.playedCards.some(pc => pc.socketId === p.id)
+                hasPlayed: this.playedCards.some(pc => pc.socketId === p.id),
+                isSpectator: p.isSpectator || false
             })),
             gameState: this.gameState,
             playedCards: (this.gameState === 'revealing' || this.gameState === 'resolving')
@@ -159,7 +166,8 @@ class Game {
     }
 
     checkTurnReady() {
-        return this.playedCards.length === Object.keys(this.players).length;
+        const activePlayers = Object.values(this.players).filter(p => !p.isSpectator);
+        return this.playedCards.length === activePlayers.length;
     }
 
     resolveTurn() {

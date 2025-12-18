@@ -205,6 +205,27 @@ button {
     box-shadow: 0 0 15px rgba(46, 204, 113, 0.2);
 }
 
+.spectator-icon {
+    font-size: 1.2rem;
+    margin-left: 5px;
+    opacity: 0.8;
+}
+
+/* Spectator Banner */
+#spectator-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0));
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    pointer-events: none;
+    z-index: 500;
+}
+
 .avatar {
     width: 32px;
     height: 32px;
@@ -552,5 +573,126 @@ button {
     to {
         opacity: 0;
         visibility: hidden;
+    }
+}
+
+/* --- Mobile Responsiveness --- */
+@media (max-width: 768px) {
+    :root {
+        --card-width: 60px;
+        --card-height: 90px;
+        --card-radius: 8px;
+    }
+
+    /* Scaling Typography */
+    h1 {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    #game-screen {
+        padding-bottom: 20px;
+        /* Reduced since hand dock is different */
+    }
+
+    #board {
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .row {
+        min-height: var(--card-height);
+        padding: 5px;
+        gap: 8px;
+    }
+
+    /* Hand Container - Scrollable */
+    #hand-container {
+        width: 100%;
+        max-width: 100%;
+        left: 0;
+        bottom: 0;
+        transform: none;
+        border-radius: 20px 20px 0 0;
+        padding: 10px;
+        height: 120px;
+        justify-content: flex-start;
+        /* Align start for scrolling */
+        overflow-x: auto;
+        /* Enable scroll */
+        white-space: nowrap;
+        /* Keep line */
+        background: rgba(0, 0, 0, 0.8);
+        /* Darker for mobile readability */
+        -webkit-overflow-scrolling: touch;
+        /* Smooth scroll iOS */
+    }
+
+    #hand-container .card {
+        flex: 0 0 auto;
+        /* Don't shrink */
+        margin: 0 5px;
+        transform: none !important;
+        /* No fans on mobile */
+    }
+
+    /* Ensure touch target size */
+    #hand-container .card.clickable {
+        min-width: 60px;
+    }
+
+    #played-center {
+        width: 100%;
+        height: 100px;
+        z-index: 50;
+        /* Ensure below overlays */
+    }
+
+    .card-center {
+        font-size: 24px;
+        /* Smaller font on cards */
+    }
+}
+
+/* --- Orientation Warning --- */
+#portrait-warning {
+    display: none;
+    /* Default hidden */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 9999;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: white;
+    padding: 20px;
+}
+
+#portrait-warning h1 {
+    font-size: 4rem;
+    margin-bottom: 0;
+}
+
+#portrait-warning p {
+    color: var(--text-muted);
+}
+
+/* Only show on mobile portrait */
+@media (max-width: 768px) and (orientation: portrait) {
+    #portrait-warning {
+        display: flex !important;
+    }
+
+    #game-screen,
+    #login-screen {
+        display: none !important;
     }
 }
