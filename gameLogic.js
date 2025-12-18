@@ -28,7 +28,7 @@ class Game {
         this.players = {}; // { socketId: { name, hand: [], score: 0, scorePile: [] } }
         this.gameState = 'waiting'; // waiting, selecting_cards, revealing, resolving, round_end, game_end
         this.round = 0;
-        this.maxScore = 66; // Standard end condition
+        this.maxScore = 200; // Standard end condition
 
         // Turn state
         this.playedCards = []; // Array of { socketId, card }
