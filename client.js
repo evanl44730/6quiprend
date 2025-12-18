@@ -6,7 +6,7 @@ if (hostname === 'localhost' || hostname === '127.0.0.1') {
     SERVER_URL = 'http://localhost:3000';
 } else {
     // Replace this with your actual Render backend URL later
-    SERVER_URL = 'https://TON-APP-RENDER.onrender.com';
+    SERVER_URL = 'https://sixquiprend.onrender.com';
 }
 
 const socket = io(SERVER_URL);
