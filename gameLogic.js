@@ -97,7 +97,14 @@ class Game {
         // Reassign host if needed
         if (this.hostId === socketId) {
             const playerIds = Object.keys(this.players);
-            this.hostId = playerIds.length > 0 ? playerIds[0] : null;
+            if (playerIds.length > 0) {
+                this.hostId = playerIds[0];
+            } else {
+                this.hostId = null;
+                // No players left? Reset game to waiting state
+                console.log("No players left. Resetting game.");
+                this.resetGame();
+            }
         }
     }
 
